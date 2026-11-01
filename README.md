@@ -47,46 +47,69 @@ void clearBuffer()
     }
 }
 
-/* reads an integer between min and max; asks again if wrong */
+/* reads an integer between min and max; asks again if wrong.
+   Input like "12abc" is also rejected (nothing may follow the number). */
 int readInt(char prompt[], int min, int max)
 {
     int value;
+    int ch;
     int ok = 0;
 
     while (ok == 0)
     {
         printf("%s", prompt);
-        if (scanf("%d", &value) == 1 && value >= min && value <= max)
+        if (scanf("%d", &value) == 1)
         {
-            ok = 1;
+            ch = getchar();              /* character right after the number */
+            if (ch == '\n' && value >= min && value <= max)
+            {
+                ok = 1;
+            }
+            else
+            {
+                if (ch != '\n')
+                    clearBuffer();       /* throw away the extra letters */
+                printf("  Invalid input! Enter only a number from %d to %d.\n", min, max);
+            }
         }
         else
         {
-            printf("  Invalid input! Enter a number from %d to %d.\n", min, max);
+            clearBuffer();
+            printf("  Invalid input! Enter only a number from %d to %d.\n", min, max);
         }
-        clearBuffer();
     }
     return value;
 }
 
-/* reads an amount greater than 0 */
+/* reads an amount greater than 0 (letters are rejected) */
 float readAmount(char prompt[])
 {
     float value;
+    int ch;
     int ok = 0;
 
     while (ok == 0)
     {
         printf("%s", prompt);
-        if (scanf("%f", &value) == 1 && value > 0)
+        if (scanf("%f", &value) == 1)
         {
-            ok = 1;
+            ch = getchar();
+            if (ch == '\n' && value > 0)
+            {
+                ok = 1;
+            }
+            else
+            {
+                if (ch != '\n')
+                    clearBuffer();
+                printf("  Invalid amount! Enter only a number greater than 0.\n");
+            }
         }
         else
         {
-            printf("  Invalid amount! Enter a number greater than 0.\n");
+            clearBuffer();
+            printf("  Invalid amount! Enter only a number greater than 0.\n");
         }
-        clearBuffer();
     }
     return value;
 }
@@ -452,6 +475,34 @@ void categorySummary(struct Expense list[], int n)
     printf("%-12s %8d %12.2f\n", "TOTAL", n, grand);
 }
 
+/* 8. RESET - deletes ALL expenses permanently */
+void resetAll(struct Expense list[], int *count)
+{
+    char confirm;
+
+    if (*count == 0)
+    {
+        printf("\n  There is no data to reset.\n");
+        return;
+    }
+
+    printf("\n  WARNING: This will permanently delete all %d record(s)!\n", *count);
+    printf("  Are you sure? (y/n): ");
+    scanf(" %c", &confirm);
+    clearBuffer();
+
+    if (confirm == 'y' || confirm == 'Y')
+    {
+        *count = 0;                      /* no records remain in memory */
+        saveToFile(list, *count);        /* file now stores 0 records   */
+        printf("  All expenses have been deleted. Tracker is now empty.\n");
+    }
+    else
+    {
+        printf("  Reset cancelled. Your data is safe.\n");
+    }
+}
+
 /* ====================== MAIN ====================== */
 
 void showMenu()
@@ -466,7 +517,8 @@ void showMenu()
     printf("  5. Delete Expense\n");
     printf("  6. Total Expense\n");
     printf("  7. Category-wise Summary\n");
-    printf("  8. Exit\n");
+    printf("  8. Reset (Delete All Data)\n");
+    printf("  9. Exit\n");
     printf("------------------------------------------\n");
 }
 
@@ -479,10 +531,10 @@ int main()
     count = loadFromFile(list);
     printf("\n  Welcome! %d record(s) loaded from file.\n", count);
 
-    while (choice != 8)
+    while (choice != 9)
     {
         showMenu();
-        choice = readInt("Enter your choice (1-8): ", 1, 8);
+        choice = readInt("Enter your choice (1-9): ", 1, 9);
 
         if (choice == 1)
             addExpense(list, &count);
@@ -498,6 +550,8 @@ int main()
             totalExpense(list, count);
         else if (choice == 7)
             categorySummary(list, count);
+        else if (choice == 8)
+            resetAll(list, &count);
         else
             printf("\n  Data saved. Thank you for using Expense Tracker!\n");
     }
